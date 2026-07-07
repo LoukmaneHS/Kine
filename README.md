@@ -2,9 +2,21 @@
 
 > **Lossless image representation for kinematic motion data.**
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.0.1-orange.svg)]()
-[![License](https://img.shields.io/badge/license-MPL--2.0-green.svg)](LICENSE)
+[
+
+![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)
+
+](https://www.python.org/downloads/)
+[
+
+![Version](https://img.shields.io/badge/version-0.0.2-orange.svg)
+
+]()
+[
+
+![License](https://img.shields.io/badge/license-MPL--2.0-green.svg)
+
+](LICENSE)
 
 **Kixel** is a Python library for representing kinematic motion as images without losing numerical precision.
 
@@ -16,12 +28,15 @@ Unlike traditional approaches that normalize values into a limited image range, 
 
 ## 📑 Table of Contents
 - [Motivation](#-motivation)
+- [Design Philosophy](#-design-philosophy)
 - [Architecture](#-architecture)
 - [Data Model](#-data-model)
+- [Core Functions](#-core-functions)
 - [Encoding Strategy](#-encoding-strategy)
 - [Accumulator Model](#-accumulator-model)
 - [Lossless Guarantee](#-lossless-guarantee)
 - [Usage Example](#-usage-example)
+- [PNG Integration](#-png-integration)
 - [Design Goals](#-design-goals)
 - [Status & Future](#-status--future-directions)
 - [License](#-license)
@@ -40,33 +55,49 @@ To answer this, Kixel treats each motion value as a collection of four bytes and
 
 ---
 
+## 🧭 Design Philosophy
+
+Kixel is **not** an object-oriented API. Instead of calling methods on objects (`robot.update(frame)`), Kixel exposes a small set of **generic verbs** that dispatch based on the type of object passed to them:
+
+```python
+create(Karacter, 6)     # instead of Karacter(6)
+clear(frame)            # works on Kframe, Kmatrix, Kimage, or Karacter
+flow(0, motion)         # works on Kmatrix or Kimage
+info(robot)             # works on any of the 4 core types
+```
+
+This keeps the vocabulary small and consistent, no matter how many data types or files the library grows into. Only **4 core data types** exist (`Karacter`, `Kframe`, `Kmatrix`, `Kimage`), and every generic function is written to support all of them explicitly.
+
+---
+
 ## 🏗️ Architecture
 
 ```text
   ┌────────────┐
   │  Karacter  │
-  └─────┬──────┘
-        │ create_motion()
-        ▼
+  └────────────┘
+
   ┌────────────┐
   │  Kmatrix   │  (frames × dof)
   └─────┬──────┘
-        │ encode_image()
+        │ encode()
         ▼
   ┌────────────┐
   │   Kimage   │  (frames × dof × 4)
   └─────┬──────┘
-        │ decode_image()
+        │ decode()
         ▼
   ┌────────────┐      ┌────────────┐
-  │  Kmatrix   │─────▶│   Kframe   │ (matframe / imgframe)
+  │  Kmatrix   │─────▶│   Kframe   │  (flow)
   └────────────┘      └─────┬──────┘
-                            │ update_accumulator()
+                            │ update() / updatc()
                             ▼
                       ┌────────────┐
                       │  Karacter  │
                       └────────────┘
 ```
+
+`Kmatrix` and `Karacter` are fully decoupled — a single `Kmatrix` can be shared across multiple `Karacter` instances of matching `dof`, each interpreting the same motion data independently.
 
 ---
 
@@ -77,7 +108,6 @@ Represents a kinematic system such as a robot, articulated rig, or animated char
 
 | Attribute | Type | Description |
 | :--- | :--- | :--- |
-| `model_name` | `str` | Human-readable identifier |
 | `dof_count` | `uint16` | Number of degrees of freedom |
 | `accumulator` | `uint32[dof]` | Current accumulated state of every DOF |
 
@@ -97,6 +127,30 @@ Lossless RGBA representation of a `Kmatrix`.
 Represents a single motion frame.
 * **Shape:** `(dof,)`
 * **Implementation:** Direct subclass of `numpy.ndarray` for seamless interoperability with NumPy operations.
+
+---
+
+## 🛠️ Core Functions
+
+All functions live under `kixel.functions` and can be imported in one line:
+
+```python
+from kixel.functions import create, clear, flow, update, updatc, state, info, encode, decode
+```
+
+| Function | Works on | Description |
+| :--- | :--- | :--- |
+| `create(kind, *args)` | `Karacter`, `Kframe`, `Kmatrix`, `Kimage` | Instantiates the given type |
+| `clear(obj)` | `Karacter`, `Kframe`, `Kmatrix`, `Kimage` | Zeroes out the object's underlying data in-place |
+| `flow(index, source)` | `Kmatrix`, `Kimage` | Extracts a single `Kframe` at `index` from a matrix or an image |
+| `update(karacter, kframe)` | `Karacter` + `Kframe` | Adds a frame's delta into the karacter's accumulator |
+| `updatc(karacter, kframe)` | `Karacter` + `Kframe` | `update()` followed by an automatic `clear()` of the frame |
+| `state(karacter)` | `Karacter` | Returns a copy of the current accumulator |
+| `info(obj)` | `Karacter`, `Kframe`, `Kmatrix`, `Kimage` | Prints a debug summary of the object |
+| `encode(kmatrix)` | `Kmatrix` | Encodes a motion matrix into a lossless `Kimage` |
+| `decode(kimage)` | `Kimage` | Decodes a `Kimage` back into the original `Kmatrix` |
+
+Naming convention: frequently used utility verbs are single words (`update`, `clear`, `flow`, `state`, `info`), while rarer construction/conversion operations use `verb_object` naming (`encode`, `decode`).
 
 ---
 
@@ -145,11 +199,11 @@ This provides a compact circular representation suitable for rotational systems.
 The following identity **always** holds:
 
 ```python
-decoded = decode_image(encode_image(kmatrix))
+restored = decode(encode(motion))
 
 assert np.array_equal(
-    kmatrix.kmatrix,
-    decoded.kmatrix
+    motion.kmatrix,
+    restored.kmatrix
 ) # Returns True
 ```
 *Encoding and decoding preserve every single bit of the original motion data.*
@@ -159,34 +213,45 @@ assert np.array_equal(
 ## 🚀 Usage Example
 
 ```python
-from kixel import (
-    Karacter,
-    create_motion,
-    encode_image,
-    decode_image,
-    matframe,
-    update_accumulator,
-)
+import numpy as np
+from kixel.classes.karacter import Karacter
+from kixel.classes.kmatrix import Kmatrix
+from kixel.functions import create, flow, update, encode, decode
 
 # 1. Initialize a kinematic character (e.g., a 6-DOF robot arm)
-robot = Karacter("robot_arm", 6)
+robot = create(Karacter, 6)
 
-# 2. Generate motion data
-motion = create_motion(
-    karacter=robot,
-    frames_number=100
-)
+# 2. Generate motion data (independent of any Karacter)
+motion = create(Kmatrix, 100, 6)
+motion.kmatrix[:] = np.random.randint(-2**31, 2**31 - 1, size=(100, 6), dtype=np.int32)
 
 # 3. Encode to lossless RGBA image
-image = encode_image(motion)
+image = encode(motion)
 
 # 4. Decode back to exact original motion data
-restored = decode_image(image)
+restored = decode(image)
 
 # 5. Extract a specific frame and update the robot's state
-frame = matframe(0, motion)
-update_accumulator(robot, frame)
+frame = flow(0, motion)
+update(robot, frame)
 ```
+
+---
+
+## 🖼️ PNG Integration
+
+Kixel can persist any `Kimage` as an actual `.png` file on disk, fully losslessly, using `kixel.core.tools.imgtool.png`:
+
+```python
+from kixel.core.tools.imgtool.png import save_png, load_png
+
+save_png(image, "motion.png")
+loaded = load_png("motion.png")
+
+assert np.array_equal(image.kimage, loaded.kimage)  # Always True
+```
+
+PNG's 8-bit RGBA (`color type 6`) channel order is fixed by spec, so byte order is preserved exactly across save/load with no platform-dependent surprises.
 
 ---
 
@@ -204,20 +269,23 @@ Kixel uses a **fixed big-endian representation** for all encoding and decoding o
 - [x] **Explicit** memory layout
 - [x] **Platform-independent** byte ordering
 - [x] **Compatibility** with image-processing workflows
+- [x] **Decoupled** motion data — a `Kmatrix` is not tied to any single `Karacter`
 
 ---
 
 ## 📊 Status & Future Directions
 
-### Current Status (v0.0.1)
+### Current Status (v0.0.2)
 **Implemented features:**
 * `Karacter`, `Kmatrix`, `Kimage`, `Kframe` core classes.
-* Motion creation & Frame extraction.
+* Unified generic functions: `create`, `clear`, `flow`, `update`, `updatc`, `state`, `info`, `encode`, `decode`.
 * Lossless image encoding & decoding.
-* Accumulator updates.
+* PNG persistence via `core/tools/imgtool`.
+* Accumulator updates with automatic or manual frame clearing.
 
 ### Future Directions
 Potential areas of exploration include:
 * 📦 Dataset generation utilities
 * 🧠 Research workflows for vision-based motion understanding
 * 📐 Spatiotemporal DOF indexing tools
+* 🧩 Additional `core/tools` integrations beyond PNG
