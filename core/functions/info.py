@@ -6,7 +6,6 @@ from ..classes.kframe import Kframe
 
 def info(obj) -> None:
     if isinstance(obj, Karacter):
-        print(f"Karacter : {obj.model_name}")
         print(f"Degrees  : {obj.dof_count}")
         print(f"Accumulat: shape={obj.accumulator.shape}, dtype={obj.accumulator.dtype}")
 
