@@ -8,7 +8,7 @@ def create_frame(dof: int) -> Kframe:
     return Kframe(dof=dof)
 
 
-def matframe(index: np.uint64, kmatrix: Kmatrix) -> Kframe:
+def matframe(index: np.uint16, kmatrix: Kmatrix) -> Kframe:
     max_index = kmatrix.kmatrix.shape[0]
 
     if not (0 <= index < max_index):
@@ -21,7 +21,7 @@ def matframe(index: np.uint64, kmatrix: Kmatrix) -> Kframe:
     return frame
 
 
-def imgframe(index: np.uint64, kimage: Kimage) -> Kframe:
+def imgframe(index: np.uint16, kimage: Kimage) -> Kframe:
     max_index = kimage.kimage.shape[0]
 
     if not (0 <= index < max_index):
