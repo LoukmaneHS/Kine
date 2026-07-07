@@ -9,14 +9,14 @@ def create_frame(dof: int) -> Kframe:
 
 
 def matframe(index: np.uint64, kmatrix: Kmatrix) -> Kframe:
-    max_index = kmatrix.kinematrix.shape[0]
+    max_index = kmatrix.kmatrix.shape[0]
 
     if not (0 <= index < max_index):
         raise IndexError(f"index must be between 0 and {max_index - 1}, got {index}")
 
-    dof = kmatrix.kinematrix.shape[1]
+    dof = kmatrix.kmatrix.shape[1]
     frame = Kframe(dof=dof)
-    frame[:] = kmatrix.kinematrix[index]
+    frame[:] = kmatrix.kmatrix[index]
 
     return frame
 
