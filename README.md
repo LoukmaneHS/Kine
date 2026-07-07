@@ -2,8 +2,6 @@
 
 > **Lossless image representation for kinematic motion data.**
 
-[
-
 ![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)
 
 ![Version](https://img.shields.io/badge/version-0.0.2-orange.svg)
