@@ -16,4 +16,4 @@ class Kframe(np.ndarray):
         self.dof_count = getattr(obj, 'dof_count', None)
 
     def __repr__(self):
-        return f"Frame(dof={self.dof_count}, values={np.asarray(self)})"
+        return f"Kframe(dof={self.dof_count}, values={np.asarray(self)})"
