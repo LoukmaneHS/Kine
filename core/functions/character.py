@@ -1,6 +1,7 @@
 import numpy as np
 from ..classes.karacter import Karacter
 from ..classes.kframe import Kframe
+from .clear import clear
 
 
 def update(karacter: Karacter, kframe: Kframe) -> None:
@@ -13,7 +14,10 @@ def update(karacter: Karacter, kframe: Kframe) -> None:
     delta_bits = kframe.view(np.uint32)
     karacter.accumulator = (karacter.accumulator + delta_bits).astype(np.uint32)
 
-    kframe[:] = 0
+
+def updatc(karacter: Karacter, kframe: Kframe) -> None:
+    update(karacter, kframe)
+    clear(kframe)
 
 
 def reset(karacter: Karacter) -> None:
