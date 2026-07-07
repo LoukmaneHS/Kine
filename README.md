@@ -48,7 +48,7 @@ Kmatrix
                     ▼
                 Karacter
 
-
+```
 ---
 
 Data Model
