@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Frame(np.ndarray):
+class Kframe(np.ndarray):
     def __new__(cls, dof: int):
         if not (0 <= dof <= 65535):
             raise ValueError(f"dof must be between 0 and 65535, got {dof}")
