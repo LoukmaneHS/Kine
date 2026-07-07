@@ -1,7 +1,7 @@
 import numpy as np
 
 class Karacter:
-    def __init__(self, name: str, dof: int):
+    def __init__(self, dof: int):
         if not (0 <= dof <= 65535):
             raise ValueError(f"dof must be between 0 and 65535, got {dof}")
         
